@@ -51,9 +51,9 @@ SCREEN_BG = (32, 32, 32) #grey
 class BoardElement():
     """ constants that define what the board can hold and what the NN sees as inputs """
     EMPTY = 0           # NN is fed this as input for empty grid spaces
-    WALL = -1           # same here for walls
+    WALL = 1           # same here for walls
     SELF_AGENT = 5      # nn input
-    ENEMY_AGENT = 1     # nn input
+    ENEMY_AGENT = -5     # nn input
     AGENT_TOP = "T"
     AGENT_BOT = "B"
     WALL_HORIZONTAL = "H"

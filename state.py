@@ -278,11 +278,14 @@ class State:
 
         # Need to also show the agent's location on the grid
         agent_position = self.agent_positions[current_agent]
+        print("agent_position:", agent_position)
         grid[agent_position.X * 2][agent_position.Y * 2] = BoardElement.SELF_AGENT
 
         enemy_position = self.agent_positions[enemy_agent]
+        print("enemy_position:", enemy_position)
         grid[enemy_position.X * 2][enemy_position.Y * 2] = BoardElement.ENEMY_AGENT
 
+        print("grid:", grid)
         return grid
 
 
