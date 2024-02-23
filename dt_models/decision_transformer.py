@@ -1,6 +1,10 @@
 import numpy as np
 import torch
 import tensorflow as tf
+import sys
+
+sys.path.append('./')
+import constants
 
 import transformers
 
@@ -84,27 +88,31 @@ class DecisionTransformer(TrajectoryModel):
        
         # self.embed_timestep = tf.keras.layers.Embedding(max_ep_len, hidden_size) #max_ep_len determines max number of timesteps
         # self.embed_return = tf.keras.layers.Dense(1, hidden_size)
-        self.embed_state = tf.keras.layers.Dense(self.state_dim) #too small to capture
-        self.embed_state_reshape = tf.keras.layers.Reshape((state_dim, 1))
+        self.embed_state = tf.keras.layers.Conv2D(self.state_dim, (3,3), input_shape=(2*constants.BOARD_SIZE-1,2*constants.BOARD_SIZE-1,1), dtype=tf.float32)
+        # self.compress_state = tf.keras.layers.Dense(self.state_dim) #too small to capture
+        # self.embed_state_reshape = tf.keras.layers.Reshape((state_dim, 1))
 
         # self.embed_action = tf.keras.layers.Dense(self.act_dim, hidden_size) #only need when actions are continuous
 
         self.embed_ln = tf.keras.layers.LayerNormalization(axis = -1)
 
-        self.transformer = Block(hidden_dim = hidden_size, num_heads = 4, key_dim = state_dim)
+        self.transformer = Block(hidden_dim = state_dim, num_heads = 4, key_dim = state_dim)
 
         self.predict_action = tf.keras.Sequential(
             [*([tf.keras.layers.Dense(self.act_dim)] + 
                ([tf.keras.layers.Dense(self.act_dim, activation = 'tanh')] if action_tanh else []) +
-               [tf.keras.layers.Reshape((act_dim*state_dim,))] +
-               [tf.keras.layers.Dense(self.act_dim)]
+               [tf.keras.layers.Reshape((-1, act_dim*11*11))] +
+               [tf.keras.layers.Dense(self.act_dim),
+                tf.keras.layers.Flatten()]
+
                )
             ]
         )
 
         self.model = tf.keras.Sequential([
             self.embed_state,
-            self.embed_state_reshape,
+            # self.compress_state,
+            # self.embed_state_reshape,
             self.embed_ln,
             self.transformer,
             self.predict_action 
@@ -113,6 +121,7 @@ class DecisionTransformer(TrajectoryModel):
        
         self.model.build((None,state_dim))
         self.optimizer.build(self.model.trainable_variables)
+        print(self.model.summary())
 
         # self.predict_state = tf.keras.layers.Dense(hidden_size, self.state_dim)
         
@@ -184,16 +193,24 @@ class DecisionTransformer(TrajectoryModel):
         # # print("transformer outputs:",transformer_outputs)
         # # print(self.predict_action)
         # action_preds = self.predict_action(stacked_inputs) #transformer_outputs) #uncomment
-
-        action_preds = self.model(states)
+        grid_state = [state[0] for state in states]
+        positions = [state[1] for state in states]
+        print("gs:",grid_state)
+        grid_state = np.expand_dims(grid_state, axis = -1)
+        action_preds = self.model(grid_state)
 
 
         return action_preds #state_preds, return_preds
     
     def forward_train(self, states, y_actions): #actions, rewards, returns_to_go, timesteps,  attention_mask=None):
         # print("states shape:", states)
+        grid_state = [state[0] for state in states]
+        positions = [state[1] for state in states]
+        grid_state = np.expand_dims(grid_state, axis = -1)
+
+
         with tf.GradientTape() as tape:
-            action_preds = self.model(states) #this must be within tape so that it will be under the scope
+            action_preds = self.model(grid_state) #this must be within tape so that it will be under the scope
             loss = tf.math.reduce_mean((action_preds - y_actions)**2)
             gradients = tape.gradient(loss, self.model.trainable_variables)
             self.optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
@@ -209,8 +226,9 @@ class DecisionTransformer(TrajectoryModel):
 
     def get_action(self, states, **kwargs): #, actions, rewards, returns_to_go, timesteps
         # given multiple states, predict the next action
-
-        states = tf.reshape(states, [1, -1, self.state_dim])
+        grid_state = [state[0] for state in states]
+        positions = [state[1] for state in states]
+        states = tf.reshape(grid_state, [1, -1, self.state_dim])
         # actions = tf.reshape(actions, [1, -1, self.act_dim])
         # returns_to_go = tf.reshape(returns_to_go, [1, -1, 1])
         # timesteps = tf.reshape(timesteps, [1, -1])

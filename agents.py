@@ -58,7 +58,7 @@ class Agent:
             trains the NN on a batch of recent memories
         """
         # child method is called here.
-        state_vector = self.get_perspective_state(board_state)
+        state_vector, agent_pos, enemy_pos = self.get_perspective_state(board_state)
 
 
         if valid_human_action == None:
@@ -88,10 +88,11 @@ class Agent:
 
 
 
-        next_state_vector = self.get_perspective_state(board_state)
+        next_state_vector, next_agent_pos, next_enemy_pos  = self.get_perspective_state(board_state)
 
+        pos_vector = (agent_pos, enemy_pos, next_agent_pos, next_enemy_pos)
         # memory is our training examples
-        self.memory.add_sample(MemoryInstance(state_vector, action_index, reward, next_state_vector))
+        self.memory.add_sample(MemoryInstance(state_vector, action_index, reward, next_state_vector, pos_vector))
         # learn off a batch of recent memories
         self.q_learn()
 
@@ -166,19 +167,20 @@ class Agent:
             TopAgent overrides this since it has a different perspecive than BottomAgent
          """
         full_grid_size = board_state.full_grid_size
-        grid = board_state.build_grid(BoardElement.AGENT_BOT, BoardElement.AGENT_TOP)
+        grid, agent_pos, enemy_pos = board_state.build_grid(BoardElement.AGENT_BOT, BoardElement.AGENT_TOP)
 
-        vector = []
-        for y in range(full_grid_size):
-            for x in range(full_grid_size):
-                vector.append(grid[x][y])
+        return grid, agent_pos, enemy_pos
+        # vector = []
+        # for y in range(full_grid_size):
+        #     for x in range(full_grid_size):
+        #         vector.append(grid[x][y])
 
-        # my walls, then enemy walls
-        vector.append(board_state.wall_counts[BoardElement.AGENT_BOT])
-        vector.append(board_state.wall_counts[BoardElement.AGENT_TOP])
+        # # my walls, then enemy walls
+        # vector.append(board_state.wall_counts[BoardElement.AGENT_BOT])
+        # vector.append(board_state.wall_counts[BoardElement.AGENT_TOP])
 
-        vector = np.array(vector)
-        return vector
+        # vector = np.array(vector)
+        # return vector
 
 
 
@@ -193,9 +195,9 @@ class Agent:
         """
         batch = self.memory.sample(self.model.get_batch_size())
         print("batch:", np.array([val[1] for val in batch]))
-        states = np.array([val[0] for val in batch])
+        states = np.array([(val[0], val[4]) for val in batch])
         # When we first start training, some of the memories of examples could be null (not enough for a full batch yet)
-        next_states = np.array([(np.zeros(self.model.get_num_states()) if val[3] is None else val[3]) for val in batch])
+        next_states = np.array([(np.zeros(self.model.get_num_states()) if val[3] is None else (val[3],val[4])) for val in batch])
 
         # predict Q(s,a) given the batch of states
 
@@ -208,12 +210,13 @@ class Agent:
         q_s_a_d = self.model.predict_batch(next_states)
 
         # setup training arrays
-        x = np.zeros((len(batch), self.model.get_num_states()))
+        # x = np.zeros((len(batch), self.model.get_num_states()))
+        x = [0 for i in range(len(batch))]
         y = np.zeros((len(batch), self.model.get_num_actions()))
 
         # convert each memory to a trainable example via q-lerning method
         for i, b in enumerate(batch): 
-            state, action, reward, next_state = b[0], b[1], b[2], b[3]
+            state, action, reward, next_state, positions = b[0], b[1], b[2], b[3], b[4]
 
             # get the current q values for all actions in state
             current_q = q_s_a[i].numpy()
@@ -229,7 +232,10 @@ class Agent:
                 # print("current_q update breakdown:",type(reward), type(np.amax(q_s_a_d[i])))
                 current_q[action] = reward + constants.GAMMA * np.amax(q_s_a_d[i]) #get action with highest score
             
-            x[i] = state
+            print("STATE:", state)
+            print("POSITIONS:", positions)
+            print("X:",x)
+            x[i] = (state, positions)
             y[i] = current_q
             
         # print("Y:", y)
@@ -279,19 +285,20 @@ class TopAgent(Agent):
         """
 
         full_grid_size = board_state.full_grid_size
-        grid = board_state.build_grid(BoardElement.AGENT_TOP, BoardElement.AGENT_BOT)
+        grid, agent_pos, enemy_pos = board_state.build_grid(BoardElement.AGENT_TOP, BoardElement.AGENT_BOT)
 
-        vector = []
-        for y in reversed(range(full_grid_size)):
-            for x in reversed(range(full_grid_size)):
-                vector.append(grid[x][y])
+        return grid, agent_pos, enemy_pos
+        # vector = []
+        # for y in reversed(range(full_grid_size)):
+        #     for x in reversed(range(full_grid_size)):
+        #         vector.append(grid[x][y])
 
-        # my walls, then enemy walls
-        vector.append(board_state.wall_counts[BoardElement.AGENT_TOP])
-        vector.append(board_state.wall_counts[BoardElement.AGENT_BOT])
+        # # my walls, then enemy walls
+        # vector.append(board_state.wall_counts[BoardElement.AGENT_TOP])
+        # vector.append(board_state.wall_counts[BoardElement.AGENT_BOT])
 
-        vector = np.array(vector)
-        return vector
+        # vector = np.array(vector)
+        # return vector
 
 
 

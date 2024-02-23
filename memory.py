@@ -4,15 +4,16 @@ import random
 
 class MemoryInstance:
     """ remember a specific state -> action -> reward, next_state training example """
-    def __init__(self, state, action, reward, next_state):
+    def __init__(self, state, action, reward, next_state, positions):
         self.state = state
         self.action = action
         self.reward = reward
         self.next_state = next_state
+        self.positions = positions
 
     def asTuple(self):
         """ Returns memory instance as a length 4 tuple """
-        return (self.state, self.action, self.reward, self.next_state)
+        return (self.state, self.action, self.reward, self.next_state, self.positions)
 
 
 

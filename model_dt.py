@@ -72,7 +72,8 @@ class Model:
         # print("STATE:", state)
         # print("predict1")
         action_preds = self.model.forward( #, state_preds, reward_preds
-            state.reshape(1, self.num_states)
+            state
+            
         )
 
         return action_preds[0]

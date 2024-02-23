@@ -286,12 +286,12 @@ class State:
         grid[enemy_position.X * 2][enemy_position.Y * 2] = BoardElement.ENEMY_AGENT
 
         print("grid:", grid)
-        return grid
+        return grid, agent_position, enemy_position
 
 
 
     def __str__(self):
-        grid = self.build_grid(BoardElement.AGENT_BOT, BoardElement.AGENT_TOP)
+        grid, _, _ = self.build_grid(BoardElement.AGENT_BOT, BoardElement.AGENT_TOP)
 
         s = "grid (AGENT_BOT as current_agent)\n"
         for y in range(self.full_grid_size):
