@@ -285,7 +285,7 @@ class State:
         print("enemy_position:", enemy_position)
         grid[enemy_position.X * 2][enemy_position.Y * 2] = BoardElement.ENEMY_AGENT
 
-        print("grid:", grid)
+        # print("grid:", grid)
         return grid, agent_position, enemy_position
 
 

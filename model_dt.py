@@ -32,11 +32,11 @@ class Model:
         if restore:
             self.load()
     
-    # def save(self):
-    #     self.saver = tf.compat.v1.train.Saver()
-    #     """ save model parameters to file"""
-    #     local = self.saver.save(self.sess, "./" + TENSORFLOW_CHECKPOINT_FOLDER + "/" + TENSORFLOW_SAVE_FILE)
-    #     print("saved to ", local)
+    def save(self):
+        
+        """ save model parameters to file"""
+        local = self.model.save("./" + TENSORFLOW_CHECKPOINT_FOLDER + "/" + TENSORFLOW_SAVE_FILE)
+        print("saved to ", local)
         
     # def load(self):
     #     """ load model parameters from file"""
@@ -70,8 +70,8 @@ class Model:
         """ Run the state ( which is state.asVector() ) through the model and return the predicted q values """
         # print("SELF.STATES:", self.states)
         # print("STATE:", state)
-        # print("predict1")
-        action_preds = self.model.forward( #, state_preds, reward_preds
+        # print("predict 1")
+        action_preds = self.model.forward_one( #, state_preds, reward_preds
             state
             
         )

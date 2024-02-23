@@ -31,7 +31,6 @@ class CausalSelfAttention(BaseAttention):
     return x
   
 class Block(tf.keras.layers.Layer):
-    """An unassuming Transformer block"""
 
     def __init__(self, hidden_dim, **kwargs):
         super(Block, self).__init__()
@@ -88,7 +87,15 @@ class DecisionTransformer(TrajectoryModel):
        
         # self.embed_timestep = tf.keras.layers.Embedding(max_ep_len, hidden_size) #max_ep_len determines max number of timesteps
         # self.embed_return = tf.keras.layers.Dense(1, hidden_size)
-        self.embed_state = tf.keras.layers.Conv2D(self.state_dim, (3,3), input_shape=(2*constants.BOARD_SIZE-1,2*constants.BOARD_SIZE-1,1), dtype=tf.float32)
+        self.embed_state = tf.keras.Sequential(
+            [tf.keras.layers.Conv2D(self.state_dim, (3,3), input_shape=(2*constants.BOARD_SIZE-1,2*constants.BOARD_SIZE-1,1), dtype=tf.float32),
+             tf.keras.layers.MaxPooling2D(pool_size = (2,2)),
+             tf.keras.layers.Dense(self.state_dim * 2),
+             tf.keras.layers.Dropout(0.1),
+             tf.keras.layers.Dense(self.state_dim),
+            ]
+        )
+        
         # self.compress_state = tf.keras.layers.Dense(self.state_dim) #too small to capture
         # self.embed_state_reshape = tf.keras.layers.Reshape((state_dim, 1))
 
@@ -101,7 +108,7 @@ class DecisionTransformer(TrajectoryModel):
         self.predict_action = tf.keras.Sequential(
             [*([tf.keras.layers.Dense(self.act_dim)] + 
                ([tf.keras.layers.Dense(self.act_dim, activation = 'tanh')] if action_tanh else []) +
-               [tf.keras.layers.Reshape((-1, act_dim*11*11))] +
+               [tf.keras.layers.Reshape((-1, act_dim*5*5))] +
                [tf.keras.layers.Dense(self.act_dim),
                 tf.keras.layers.Flatten()]
 
@@ -128,6 +135,15 @@ class DecisionTransformer(TrajectoryModel):
         
         # self.predict_return = tf.keras.layers.Dense(hidden_size, 1)
 
+    def forward_one(self, state): #actions, rewards, returns_to_go, timesteps,  attention_mask=None):
+       
+        grid_state = np.expand_dims(state, axis = 0)
+        # print("fwd1:",grid_state.shape)
+        action_preds = self.model(grid_state)
+
+
+        return action_preds #state_preds, return_preds
+    
     def forward(self, states): #actions, rewards, returns_to_go, timesteps,  attention_mask=None):
         # print("states shape:", states.shape)
         # # batch_size, seq_length = states.shape[0], states.shape[1]
@@ -195,8 +211,9 @@ class DecisionTransformer(TrajectoryModel):
         # action_preds = self.predict_action(stacked_inputs) #transformer_outputs) #uncomment
         grid_state = [state[0] for state in states]
         positions = [state[1] for state in states]
-        print("gs:",grid_state)
+        # print("gs:",grid_state)
         grid_state = np.expand_dims(grid_state, axis = -1)
+        # print("fwd:",grid_state.shape)
         action_preds = self.model(grid_state)
 
 

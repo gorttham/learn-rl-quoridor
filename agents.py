@@ -57,8 +57,10 @@ class Agent:
             records (S, A, S', R) as a memory
             trains the NN on a batch of recent memories
         """
+        
         # child method is called here.
         state_vector, agent_pos, enemy_pos = self.get_perspective_state(board_state)
+        
 
 
         if valid_human_action == None:
@@ -129,14 +131,13 @@ class Agent:
             3. go through them until a valid action is found
             4. return the action or of none are found, return a random valid action
         """
-        print("state_vector:", state_vector) #one state
         q_values = self.model.predict_one(state_vector)
         # q_values = q_values.flatten()
 
         action_values, action_indexes = tf.nn.top_k(q_values, len(q_values))
-        print("q_values:", q_values)
-        print("action_values:",action_values)
-        print("action_indexes:", action_indexes)
+        # print("q_values:", q_values)
+        # print("action_values:",action_values)
+        # print("action_indexes:", action_indexes)
         action_indexes = action_indexes.numpy().tolist()
 
         # return the legal action with the highest q-value
@@ -194,7 +195,7 @@ class Agent:
             Q is R + gamme * max(s', a')
         """
         batch = self.memory.sample(self.model.get_batch_size())
-        print("batch:", np.array([val[1] for val in batch]))
+        # print("batch:", np.array([val[1] for val in batch]))
         states = np.array([(val[0], val[4]) for val in batch])
         # When we first start training, some of the memories of examples could be null (not enough for a full batch yet)
         next_states = np.array([(np.zeros(self.model.get_num_states()) if val[3] is None else (val[3],val[4])) for val in batch])
@@ -232,9 +233,9 @@ class Agent:
                 # print("current_q update breakdown:",type(reward), type(np.amax(q_s_a_d[i])))
                 current_q[action] = reward + constants.GAMMA * np.amax(q_s_a_d[i]) #get action with highest score
             
-            print("STATE:", state)
-            print("POSITIONS:", positions)
-            print("X:",x)
+            # print("STATE:", state)
+            # print("POSITIONS:", positions)
+            # print("X:",x)
             x[i] = (state, positions)
             y[i] = current_q
             
